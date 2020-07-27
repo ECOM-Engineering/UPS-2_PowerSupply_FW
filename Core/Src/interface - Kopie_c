@@ -1,0 +1,352 @@
+////////////////////////////////////////////////////////////////////////////////
+//  Project      UPS-2 Raspberry pi power supply
+/*! @file        targetComm.c
+//  @brief       Software Timer Functions & Frequency Generation
+//  @author      Klaus Mezger
+//  @version     1
+//
+*///////////////////////////////////////////////////////////////////////////////
+//== standard libraries ==
+
+
+//== module headers ==
+#include <main.h>
+#include <stdio.h>
+
+
+#include "UPS-2.h"
+#include "interface.h"
+#include "Timer.h"
+
+
+
+//== local defines
+#define PORT_SHORT_PULSE 100
+
+
+
+//== local function prototypes
+
+//== local typedefs
+
+//== module global variables
+char strMessage[81];
+
+
+
+//== public functions
+/**
+  * @brief get STM32g0x0 CPU temperature using fixpoint
+  * @param[in]      ADC value, 12bit
+  * @param[out]     none
+  * @retval         temperature in 1/10°Celsius
+  * @Author         Klaus Mezger
+*/
+
+/* Tested with STM32G070 and g030.
+ * This routine is fast because of using fixoint arithmetic.
+ * Works without TS_CAL2, because this is not mentioned in the datasheets of STM32G030 and g070.
+ * Even with using TS_CAL2 from STM32g031 / g071 you do possibly not get better results
+ *
+*/
+uint16_t ecGetCPUTemp(uint16_t ADCvalue)
+{
+    /* 130° and 30°C value from STM32G31 */
+    #define TEMP30_CAL  *(uint16_t*) 0x1FFF75A8
+    #define TEMP130_CAL *(uint16_t*) 0x1FFF75CA //Not existent in STM32G0x0 DS, used here as test reference
+    #define REF_TEMP 30         //calibration from datasheet
+
+    /* decimal fixpoint d.1 */
+    #define SLOPE_Y         25  //10*mV /°C from datasheet
+    #define SLOPE_Y_INV     (int32_t)(100000/SLOPE_Y) //10 * inverse of slope
+    #define VDDA_10d1       33  //VDDA 3.3V
+    #define VREF_CAL_10d1   30  //VDDA 3.0V reference used in factory TS_CALx values
+
+    uint32_t cal30;
+    int16_t temp_10d1;  //resulting temperature
+    int32_t adc_0;
+
+    /* calc 30°C reference using VDDA 3.3V */
+    cal30 = (TEMP30_CAL * VREF_CAL_10d1 /  VDDA_10d1);                  //ADC at 30° @ VDDA = 3.3V
+
+    /* calc ADC value @ 0°C using typical TS slope from datasheet */
+    adc_0 =  cal30 - ((REF_TEMP * SLOPE_Y << 12) / VDDA_10d1) / 1000;   //calculate offset @ 0°C
+
+    /* calculate temperature based on TS offset @ 0°C */
+    temp_10d1 = (ADCvalue - adc_0) * ((SLOPE_Y_INV * VDDA_10d1) >> 12) / 10;
+
+    // original formula needs float temp = ((130-30)/(TS_CAL2 - TS_CAL1)) * (TS_DATA * TS_CAL1) + 30
+    return temp_10d1;
+}
+
+
+/**
+  * @brief      Port command handler
+  * @param[in]
+  * @param[out]
+  * @retval     None
+*/
+int ecPortHandler(eKeyPress_t keyPress)
+{
+    return 1;
+}
+
+/**
+  * @brief          Execute Button commands and forward on parallel port
+  * @param[in]      keyPress comes from  ecButtonHandler()
+  * @param[out]
+  * @retval     None
+
+Long and Superlong button is directly passed via GPIO and serial port.
+Short and double click will be compressed and sent as pulses to port.
+*/
+int ecExecCommand(eKeyPress_t keyPress)
+{
+
+    static eKeyPress_t lastCmd;
+    static uint8_t doubleCounter;
+    switch(keyPress)
+      {
+          case KEY_PENDING:
+//              if(ecSWTimerRead(MESSAGE_TIMER) == 0)
+//              {
+//                  HAL_UART_Transmit(&g_huart2, (uint8_t *)"KEY pending\r\n", 13, 20);
+//                  ecSWTimerStart(MESSAGE_TIMER, 500);
+//              }
+              ecSWTimerStart(KEY_TIMER, PORT_SHORT_PULSE); //set minimum pulse time
+              HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_RESET);
+              break;
+
+          case KEY_SHORT_PRESS:  //UPS internal command: switch power on
+//            HAL_ADC_Start_IT(&hadc1);
+//              HAL_ADC_Start_DMA(&hadc1, (uint32_t*)g_adc_buf, 32);
+              HAL_UART_Transmit(&g_huart2, (uint8_t *)"SHORT press\r\n", 13, 20);
+              HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = high = ON
+              lastCmd = KEY_SHORT_PRESS; //used later for CMD_OUT_Pin pulse
+              break;
+
+          case KEY_DOUBLE_PRESS: //shutdown and restart
+              HAL_UART_Transmit(&g_huart2, (uint8_t *)"DOUBLE press\r\n", 13, 20);
+              HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_RESET);
+              doubleCounter = 0;
+              lastCmd = KEY_DOUBLE_PRESS;
+              break;
+
+          case KEY_LONG_PRESS:  //shutdown and goto standby
+              HAL_UART_Transmit(&g_huart2, (uint8_t *)"LONG press\r\n", 13, 20);
+              HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_SET);
+              break;
+
+          case KEY_SUPER_LONG_PRESS: //shutdown and switch power down
+              HAL_UART_Transmit(&g_huart2, (uint8_t *)"SUPER_LONG press\r\n", 18, 20);
+              HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_SET);
+
+              break;
+          default:
+              break;
+      }
+      if(lastCmd == KEY_SHORT_PRESS)
+      {
+          if(ecSWTimerRead(KEY_TIMER) == 0) //
+          {
+              HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_SET);
+//              HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = high = power ON
+              lastCmd = 0;
+          }
+      }
+      if(lastCmd == KEY_DOUBLE_PRESS)
+      {
+          if (doubleCounter < 3)
+          {
+              if(ecSWTimerRead(KEY_TIMER) == 0)
+              {
+                  HAL_GPIO_TogglePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin);
+                  ecSWTimerStart(KEY_TIMER, PORT_SHORT_PULSE); //set minimum hold time
+                  doubleCounter ++;
+              }
+          }
+          else
+          {
+              lastCmd = 0;
+              doubleCounter = 0;
+          }
+      }
+
+      if(ecSWTimerRead(KEY_TIMER) == 0)
+          return 1;
+      else
+          return 0;
+}
+
+
+/**
+  * @brief      Evaluate Pi state and feedback state and transitions by LED
+  * @param[in]  keyPress
+  * @param[in]  actual Pi state
+  * @param[out] new Pi state
+  * @retval     None
+*/
+ePiState_t ecHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
+{
+    static uint8_t keyBlinkActive;
+    static uint8_t preparePiPower_off;
+    uint8_t piACK_Port, piCMD_Port;
+    ePiState_t old_piState;
+
+    ePiPortState_t piPortState;
+    static ePiPortState_t old_piPortState = 0xff;
+
+    old_piState = piState;
+
+    piACK_Port = HAL_GPIO_ReadPin(ACK_IN_GPIO_Port , ACK_IN_Pin);
+    piCMD_Port = HAL_GPIO_ReadPin(CMD_OUT_GPIO_Port, CMD_OUT_Pin);
+    if (piCMD_Port) //check if no spike on this line during startup
+    {
+        ecSWTimerStart(DELAY_TIMER,10);
+        while(ecSWTimerRead(DELAY_TIMER)); // wait
+        piCMD_Port = HAL_GPIO_ReadPin(CMD_OUT_GPIO_Port, CMD_OUT_Pin);
+    }
+
+    piPortState = piACK_Port + (piCMD_Port << 1);
+
+    if(piPortState != old_piPortState)
+    {
+        sprintf(strMessage, "CMD % d ACK %d \r\n",piCMD_Port, piACK_Port );
+        HAL_UART_Transmit(&g_huart2, (uint8_t *)strMessage, strlen(strMessage), 10);
+        switch(piPortState)
+        {
+            case CMD0_ACK0:
+                break;
+            case CMD0_ACK1:
+                break;
+            case CMD1_ACK0:
+                break;
+            case CMD1_ACK1:
+                break;
+        }
+        old_piPortState = piPortState;
+    }
+
+    switch(piState)
+    {
+        case PI_STATE_UNKNOWN: //happens only at program start
+
+            break;
+
+        case PI_PWR_OFF:
+            break;
+
+        case PI_STBY:
+            break;
+
+        case PI_STARTING_UP:
+            break;
+
+        case PI_RUNNING:
+            break;
+
+        case PI_SHUTTING_DOWN:
+            break;
+
+    }
+
+
+
+    if(piACK_Port)                             //CMD = x  ACK = 1
+    {
+
+        if(keyPress == KEY_SUPER_LONG_PRESS)
+            preparePiPower_off = 1; //prepare power OFF after standby
+
+        if(keyPress == KEY_PENDING)
+        {
+            if(!keyBlinkActive) //stay in blink state
+            {
+                keyBlinkActive = 1;
+                ////ecSetLED(LED_NUCLEO, 1000);
+                ecSetLED(LED_Pi, 1000);            //signal key press
+            }
+        }
+        else
+        {
+            if(piState != PI_STBY)
+            {
+                sprintf(strMessage, "RUNNING\r\n");
+                piState = PI_RUNNING;
+                keyBlinkActive = 0;                  //signal Pi ready
+                ////ecSetLED(LED_NUCLEO, LED_ON);
+                ecSetLED(LED_Pi, LED_ON);
+            }
+        }
+
+    }
+    else if(piCMD_Port == 0)                   //CMD = 0  ACK = 0
+    {
+
+        if((piState != PI_PWR_OFF) && (piState != PI_STARTING_UP))
+        {
+            sprintf(strMessage, "Stand by\r\n");
+            piState = PI_STBY;
+            ////ecSetLED(LED_NUCLEO, LED_OFF);
+            ecSetLED(LED_Pi, LED_OFF);
+
+            if(keyPress == KEY_SHORT_PRESS) //toggle Pi power to get it restarted
+            {
+                HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low = power OFF
+                ecSWTimerStart(DELAY_TIMER,200);
+                while(ecSWTimerRead(DELAY_TIMER)); // wait
+                HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = low = power ON
+            }
+
+
+        }
+
+        if(preparePiPower_off)
+        {
+            ecSWTimerStart(DELAY_TIMER,2000);
+            while(ecSWTimerRead(DELAY_TIMER)); //safety  wait
+            sprintf(strMessage, "Pi Power OFF\r\n");
+            HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low = OFF
+            preparePiPower_off = 0;
+            piState = PI_PWR_OFF;
+        }
+
+
+    }
+    else                                             //CMD = 0  ACK = 1
+    {
+        if(piState == PI_RUNNING)
+        {
+            piState = PI_SHUTTING_DOWN;
+            sprintf(strMessage, "Shutting down\r\n");
+            ////ecSetLED(LED_NUCLEO, 250);
+            ecSetLED(LED_Pi, 250);
+
+        }
+        if(piState == PI_STBY)
+        {
+            piState = PI_STARTING_UP;
+            sprintf(strMessage, "Starting Up\r\n");
+            ////ecSetLED(LED_NUCLEO, 150);
+            ecSetLED(LED_Pi, 150);
+
+        }
+        if(piState == PI_PWR_OFF)
+         {
+             piState = PI_STARTING_UP;
+             sprintf(strMessage, "PWR_ON and starting up\r\n");
+             ////ecSetLED(LED_NUCLEO, 150);
+             ecSetLED(LED_Pi, 150);
+
+         }
+
+    }
+
+    if(piState != old_piState)
+    {
+        HAL_UART_Transmit(&g_huart2, (uint8_t *)strMessage, strlen(strMessage), 10);
+
+    }
+    return piState;
+}
+
