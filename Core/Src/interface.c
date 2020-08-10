@@ -1,6 +1,8 @@
+/*! @addtogroup Interface
+@{ */
 ////////////////////////////////////////////////////////////////////////////////
 //  Project      UPS-2 Raspberry pi power supply
-/*! @file        targetComm.c
+/*! @file        interface.c
 //  @brief       Software Timer Functions & Frequency Generation
 //  @author      Klaus Mezger
 //  @version     1
@@ -117,20 +119,14 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
         if(piPortState != old_piPortState)
         {
             sprintf(strMessage, "CMD % d ACK %d \r\n",piCMD_Port, piACK_Port );
-            ecTxString(strMessage, strlen(strMessage));
+//            ecTxString(strMessage, strlen(strMessage));
             old_piPortState = piPortState;
         }
     }
     switch(piPortState)
     {
         case CMD0_ACK0:
-            if(piState != PI_PWR_OFF)
-            {
-                piState = PI_STBY;
-                sprintf(strMessage, "Stand by\r\n");
-            }
-             ////ecSetLED(LED_NUCLEO, LED_OFF);
-             ecSetLED(LED_Pi, LED_OFF);
+//             ecSetLED(LED_Pi, LED_OFF);
 
              if(keyPress == KEY_SHORT_PRESS) //toggle Pi power to get it restarted
              {
@@ -138,19 +134,9 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
                  ecSWTimerStart(DELAY_TIMER,200);
                  while(ecSWTimerRead(DELAY_TIMER)); // wait
                  HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = high: power ON
+                 ecSetLED(LED_Pi, 150);
              }
-
-            if(preparePiPower_off)
-             {
-                 ecSWTimerStart(DELAY_TIMER,2000);
-                 while(ecSWTimerRead(DELAY_TIMER)); //safety  wait
-                 sprintf(strMessage, "Pi Power OFF\r\n");
-                 HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low = OFF
-                 preparePiPower_off = 0;
-                 piState = PI_PWR_OFF;
-//                 HAL_PWR_EnterSTANDBYMode();
-             }
-            break;
+             break;
 
         case CMD0_ACK1:
 
@@ -161,29 +147,61 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
 
             break;
         case CMD1_ACK0:
-            if(piState == PI_RUNNING)
-             {
-                  piState = PI_SHUTTING_DOWN;
-                  sprintf(strMessage, "Shutting down\r\n");
-                  ////ecSetLED(LED_NUCLEO, 250);
-                  ecSetLED(LED_Pi, 250);
 
-             }
-             if(piState == PI_STBY)
-             {
-                 piState = PI_STARTING_UP;
-                 sprintf(strMessage, "Starting Up\r\n");
-                 ////ecSetLED(LED_NUCLEO, 150);
-                 ecSetLED(LED_Pi, 150);
-             }
-             if(piState == PI_PWR_OFF)
-              {
-                  piState = PI_STARTING_UP;
-                  sprintf(strMessage, "PWR_ON and starting up\r\n");
-                  ////ecSetLED(LED_NUCLEO, 150);
-                  ecSetLED(LED_Pi, 150);
+            switch(piState)
+            {
+                case PI_RUNNING:
+                    piState = PI_SHUTTING_DOWN;
+                    sprintf(strMessage, "Pi Shutting down\r\n");
+                    ////ecSetLED(LED_NUCLEO, 250);
+                    ecSetLED(LED_Pi, 250);
+                    ecSWTimerStart(MESSAGE_TIMER, 2000);
+                    break;
 
-              }
+                case PI_STBY:
+                    if(keyPress == KEY_SHORT_PRESS) //toggle Pi power to get it restarted
+                    {
+                        HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low: power OFF
+                        ecSWTimerStart(DELAY_TIMER,200);
+                        while(ecSWTimerRead(DELAY_TIMER)); // wait
+                        HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = high: power ON
+                        ecSetLED(LED_Pi, 150);
+                    }
+                    if(preparePiPower_off)
+                    {
+                         ecSWTimerStart(DELAY_TIMER,2000);
+                         while(ecSWTimerRead(DELAY_TIMER)); //safety  wait
+                         sprintf(strMessage, "Pi Power OFF\r\n");
+                         HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low = OFF
+                         preparePiPower_off = 0;
+                         piState = PI_PWR_OFF;
+                    }
+                    break;
+
+                case PI_PWR_OFF:
+                case PI_STATE_UNKNOWN:
+
+                    piState = PI_STARTING_UP;
+                    sprintf(strMessage, "Pi PWR_ON and starting up\r\n");
+                    ////ecSetLED(LED_NUCLEO, 150);
+                    ecSetLED(LED_Pi, 150);
+                    break;
+
+                case PI_SHUTTING_DOWN:
+                    if(ecSWTimerRead(MESSAGE_TIMER) == 0)
+                    {
+                         ecSetLED(LED_Pi, LED_OFF);
+    //                     HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_RESET);
+                         piState = PI_STBY;
+                         sprintf(strMessage, "Pi standby\r\n");
+                    }
+                    break;
+                default:
+                    break;
+
+
+
+            }
             break;
         case CMD1_ACK1:
             sprintf(strMessage, "RUNNING\r\n");
@@ -611,4 +629,5 @@ uint16_t ecAnalogHandler(adc_buf_t adcVoltages)
     return retValue;
 }
 
+/*! @} */ //end of doxygen module group
 

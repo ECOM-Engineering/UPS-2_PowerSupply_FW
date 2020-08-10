@@ -1,6 +1,8 @@
+/*! @addtogroup Interface
+@{ */
 ////////////////////////////////////////////////////////////////////////////////
 //  Project      UPS-2 Raspberry pi power supply
-/*! @file        targetComm.h
+/*! @file        interface.h
 //  @brief       Software Timer Functions & Frequency Generation
 //  @author      Klaus Mezger
 //  @version     1
@@ -38,3 +40,6 @@ uint8_t ecDecodePiRequest(uint8_t *RxStr, const char *requestStr);
 }
 #endif
 #endif //__INTERFACE_H
+
+/*! @} */ //end of doxygen module group
+

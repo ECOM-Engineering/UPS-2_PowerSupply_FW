@@ -11,7 +11,7 @@
 #ifndef INC_UPS_2_H_
 #define INC_UPS_2_H_
 
-//#define SERIAL_DEBUG
+#define SERIAL_DEBUG
 
 #define C_HDR_STR "ECOM UPS-2 build " __DATE__"\r\n"
 
@@ -39,7 +39,7 @@
 #define MAIN_LOW_VOLTAGE_LIMIT  70  //7.0V
 #define BAT_LOW_VOLTAGE_LIMIT   68 // --> 6.5V under load
 #define CPU_HIGH_TEMP_LIMIT     800  //80°C
-#define PI_5V_DIODE_THRESHOLD   19  //threshold UISB powered: > 1.9V
+#define PI_5V_DIODE_THRESHOLD   17  //threshold UISB powered: > 1.7V
 
 
 /* power supply states */

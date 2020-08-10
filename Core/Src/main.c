@@ -1,4 +1,7 @@
 /* USER CODE BEGIN Header */
+/*! @addtogroup Main
+@{ */
+
 /**
   ******************************************************************************
   * @file           : main.c
@@ -17,7 +20,6 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
@@ -57,9 +59,6 @@ typedef enum
 #define KEY_T_DEBOUNCE 		20		//ms
 #define KEY_T_DBL_WINDOW	350	//ms
 #define ADC_DMA_BUF_SIZE	32		//bytes --> 4 * 16Bit elements
-
-
-
 
 /* USER CODE END PD */
 
@@ -118,9 +117,9 @@ int main(void)
     eKeyPress_t keyPress;
     ePiState_t piState = PI_STATE_UNKNOWN;
     char mainMessage[81];
-    uint8_t charsWritten;
+    uint16_t charsWritten;
 #ifdef SERIAL_DEBUG
-    char rxStrBuf[RX_BUF_SIZE];
+    char rxStrBuf[80];
 #endif
 
   /* USER CODE END 1 */
@@ -189,16 +188,12 @@ int main(void)
           if(ecSWTimerRead(MESSAGE_TIMER) == 0)
          {
              ecSWTimerStart(MESSAGE_TIMER, 1000);
-//             charsWritten = sprintf(g_analogStr,"Main: %sV",ecFormatFixptStr(g_adc_voltages.main_voltage));
-//             charsWritten += sprintf(&g_analogStr[charsWritten],", Batt: %sV",ecFormatFixptStr(g_adc_voltages.batt_voltage));
-//             charsWritten += sprintf(&g_analogStr[charsWritten],", UPS CPU: %dgradC\n",g_adc_voltages.CPU_temp/10);
-
              charsWritten = sprintf(g_analogStr,"%s",ecFormatFixptStr(g_adc_voltages.main_voltage));
              charsWritten += sprintf(&g_analogStr[charsWritten],",%s",ecFormatFixptStr(g_adc_voltages.batt_voltage));
              charsWritten += sprintf(&g_analogStr[charsWritten],",%d\n",g_adc_voltages.CPU_temp/10);
 
-             #ifdef SERIAL_DEBUG
-             ecTxString(mainMessage, strlen(mainMessage));
+#ifdef SERIAL_DEBUG
+//             ecTxString(mainMessage, strlen(mainMessage));
 #endif
          }
 
@@ -264,10 +259,11 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -278,7 +274,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
@@ -290,7 +286,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the peripherals clocks 
+  /** Initializes the peripherals clocks
   */
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
   PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_SYSCLK;
@@ -313,12 +309,11 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 0 */
 
   ADC_ChannelConfTypeDef sConfig = {0};
-  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
 
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
@@ -345,7 +340,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
@@ -353,7 +348,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
@@ -361,7 +356,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_6;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
@@ -369,18 +364,11 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Analog WatchDog 2 
-  */
-  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
-  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -453,11 +441,11 @@ static void MX_USART2_UART_Init(void)
 
   /* Peripheral clock enable */
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2);
-  
+
   LL_IOP_GRP1_EnableClock(LL_IOP_GRP1_PERIPH_GPIOA);
-  /**USART2 GPIO Configuration  
+  /**USART2 GPIO Configuration
   PA2   ------> USART2_TX
-  PA3   ------> USART2_RX 
+  PA3   ------> USART2_RX
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
@@ -510,10 +498,10 @@ static void MX_USART2_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -547,7 +535,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_Main_GPIO_Port, LED_Main_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, EN_5V_Pin|LED_Pin|CMD_OUT_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, EN_5V_Pin|LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(CMD_OUT_GPIO_Port, CMD_OUT_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : LED_Pi_Pin LED_Batt_Pin */
   GPIO_InitStruct.Pin = LED_Pi_Pin|LED_Batt_Pin;
@@ -800,7 +791,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

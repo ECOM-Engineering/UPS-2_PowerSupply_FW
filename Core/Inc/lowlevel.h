@@ -1,3 +1,5 @@
+/*! @addtogroup Interface
+@{ */
 ////////////////////////////////////////////////////////////////////////////////
 //  Project      UPS-2 Raspberry pi power supply
 /*! @file        lowlevel.h
@@ -31,8 +33,9 @@ void     ecTxString(char *string, uint8_t Size);
 //== public typedefs
 
 
-
 #ifdef __cplusplus
 }
 #endif
 #endif //__LOWLEVEL_H
+
+/*! @} */ //end of doxygen module group

@@ -1,3 +1,5 @@
+/*! @addtogroup Interface
+@{ */
 ////////////////////////////////////////////////////////////////////////////////
 //  Project      UPS-2 Raspberry pi power supply
 /*! @file        lowlevel.c
@@ -38,7 +40,7 @@ int16_t     g_rxRdy;
 //== public functions
 /**
   * @brief  initiates RX transfer
-  * @param[out]  global None
+  * @param[out]  global
   * @retval None
   */
 void ecRx_Init(void)
@@ -98,7 +100,13 @@ void ecTxString(char *string, uint8_t Size)
     }
 }
 
-
+/*todo explanation ecGetRxString */
+/**
+  * @brief
+  * @param[out] *databuf pointer to external buffer
+  * @param[in]  maxSize databuf lenght
+  * @retval     None
+  */
 int16_t ecGetRxString(uint8_t *dataBuf, uint8_t maxSize)
 {
     int16_t retVal = 0;
@@ -203,3 +211,5 @@ void ecUSART_Rx_Error_Callback(void)
   }
   NVIC_EnableIRQ(USART2_IRQn);
 }
+
+/*! @} */ //end of doxygen module group
