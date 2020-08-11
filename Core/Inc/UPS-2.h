@@ -11,7 +11,7 @@
 #ifndef INC_UPS_2_H_
 #define INC_UPS_2_H_
 
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 #define C_HDR_STR "ECOM UPS-2 build " __DATE__"\r\n"
 

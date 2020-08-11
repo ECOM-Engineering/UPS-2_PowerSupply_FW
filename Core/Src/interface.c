@@ -169,12 +169,14 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
                     }
                     if(preparePiPower_off)
                     {
-                         ecSWTimerStart(DELAY_TIMER,2000);
-                         while(ecSWTimerRead(DELAY_TIMER)); //safety  wait
+                         ecSWTimerStart(DELAY_TIMER,3000);
+                         while(ecSWTimerRead(DELAY_TIMER)); //safety  wait, because no information on shutdown finished
                          sprintf(strMessage, "Pi Power OFF\r\n");
                          HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low = OFF
                          preparePiPower_off = 0;
                          piState = PI_PWR_OFF;
+                         ecSWTimerStart(DELAY_TIMER,1000);
+                         while(ecSWTimerRead(DELAY_TIMER)); //wait for CMD and ACK lines falling to 0
                     }
                     break;
 
@@ -251,14 +253,14 @@ int ecPortExecCommand(eKeyPress_t keyPress)
               break;
 
           case KEY_SHORT_PRESS:  //UPS internal command: switch power on
-              sprintf(strMessage, "> Pi power ON\r\n");
+              sprintf(strMessage, "Pi power ON\n");
               ecTxString(strMessage, strlen(strMessage));
               HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //5V enable = high = ON
               lastCmd = KEY_SHORT_PRESS; //used later for CMD_OUT_Pin pulse
               break;
 
           case KEY_DOUBLE_PRESS: //shutdown and restart
-              sprintf(strMessage, "u!shutdown -r now\n");
+              sprintf(strMessage, "shutdown -r now\n");
               ecTxString(strMessage, strlen(strMessage));
               HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_RESET);
               doubleCounter = 0;
@@ -266,13 +268,13 @@ int ecPortExecCommand(eKeyPress_t keyPress)
               break;
 
           case KEY_LONG_PRESS:  //shutdown and goto standby
-              sprintf(strMessage, "u!shutdown now\r\n");
+              sprintf(strMessage, "shutdown now\r\n");
               ecTxString(strMessage, strlen(strMessage));
               HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_SET);
               break;
 
           case KEY_SUPER_LONG_PRESS: //shutdown and switch power down
-              sprintf(strMessage, "u!shutdown -P now\r\n");
+              sprintf(strMessage, "shutdown -P now\r\n");
               ecTxString(strMessage, strlen(strMessage));
               HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_SET);
               break;
@@ -392,7 +394,7 @@ int ecSerialExecCommand(eKeyPress_t keyPress)
 
           case KEY_SUPER_LONG_PRESS: //shutdown and switch power down
               //power down is handled by UPS
-              sprintf(strMessage, "u!shutdown -P now\r\n");
+              sprintf(strMessage, "u!shutdown -P now\r\n"); //proforma -P. not supported by Raspi
               ecTxString(strMessage, strlen(strMessage));
               break;
           default:
@@ -515,7 +517,7 @@ ePiState_t ecSerialHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
             {
                 if( preparePiPower_off)
                 {
-                    ecSWTimerStart(DELAY_TIMER,2000); //allow pi a last breath
+                    ecSWTimerStart(DELAY_TIMER,4000); //allow pi a last breath
                     piState = PI_PWR_OFF;
                 }
                 /* check for wakup */
