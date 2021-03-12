@@ -474,17 +474,18 @@ ePiState_t ecSerialHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
             {
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_STATUS))
                 {
-                    sprintf(strMessage, "0x%04X  %s", g_powerState, C_HDR_STR);
+                    sprintf(strMessage, "%s0x%04X  %s", UPS_PREFIX, g_powerState, C_HDR_STR);
                     ecTxString(strMessage, strlen(strMessage));
                 }
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_ANALOG))
                 {
-                    ecTxString(g_analogStr, strlen(g_analogStr));
+                    sprintf(strMessage, "%s%s", UPS_PREFIX,g_analogStr);
+                    ecTxString(strMessage, strlen(strMessage));
                 }
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_PWR_OFF))
                 {
-                    sprintf(strMessage,"u> %s\n", PI_REQ_PWR_OFF);
-                    ecTxString(strMessage, strlen(strMessage));
+                    sprintf(strMessage,"%s%s\n", UPS_PREFIX, PI_REQ_PWR_OFF);
+                    ecTxString(strMessage, strlen(strMessage)); //this goes in the air, debug only
                     preparePiPower_off = 1;
                     piState = PI_SHUTTING_DOWN;
                 }

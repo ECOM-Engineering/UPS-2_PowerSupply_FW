@@ -22,6 +22,7 @@
 #define PI_REQ_ANALOG       "r?analog"
 #define PI_REQ_PWR_OFF      "r?shutdown -P"
 
+#define UPS_PREFIX          "u>"
 
 
 //
