@@ -119,15 +119,12 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
         if(piPortState != old_piPortState)
         {
             sprintf(strMessage, "CMD % d ACK %d \r\n",piCMD_Port, piACK_Port );
-//            ecTxString(strMessage, strlen(strMessage));
             old_piPortState = piPortState;
         }
     }
     switch(piPortState)
     {
         case CMD0_ACK0:
-//             ecSetLED(LED_Pi, LED_OFF);
-
              if(keyPress == KEY_SHORT_PRESS) //toggle Pi power to get it restarted
              {
                  HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_RESET); //5V enable = low: power OFF
@@ -153,7 +150,6 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
                 case PI_RUNNING:
                     piState = PI_SHUTTING_DOWN;
                     sprintf(strMessage, "Pi Shutting down\r\n");
-                    ////ecSetLED(LED_NUCLEO, 250);
                     ecSetLED(LED_Pi, 250);
                     ecSWTimerStart(MESSAGE_TIMER, 2000);
                     break;
@@ -185,7 +181,6 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
 
                     piState = PI_STARTING_UP;
                     sprintf(strMessage, "Pi PWR_ON and starting up\r\n");
-                    ////ecSetLED(LED_NUCLEO, 150);
                     ecSetLED(LED_Pi, 150);
                     break;
 
@@ -193,15 +188,12 @@ ePiState_t ecPortHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
                     if(ecSWTimerRead(MESSAGE_TIMER) == 0)
                     {
                          ecSetLED(LED_Pi, LED_OFF);
-    //                     HAL_GPIO_WritePin(CMD_OUT_GPIO_Port,  CMD_OUT_Pin, GPIO_PIN_RESET);
                          piState = PI_STBY;
                          sprintf(strMessage, "Pi standby\r\n");
                     }
                     break;
                 default:
                     break;
-
-
 
             }
             break;
@@ -383,18 +375,18 @@ int ecSerialExecCommand(eKeyPress_t keyPress)
               break;
 
           case KEY_DOUBLE_PRESS: //shutdown and restart
-              sprintf(strMessage, "u!shutdown -r now\r\n");
+              sprintf(strMessage, UPS_REQ_RESTART);
               ecTxString(strMessage, strlen(strMessage));
               break;
 
           case KEY_LONG_PRESS:  //shutdown and goto standby
-              sprintf(strMessage, "u!shutdown now\r\n");
+              sprintf(strMessage, UPS_REQ_SHUTDOWN);
               ecTxString(strMessage, strlen(strMessage));
               break;
 
           case KEY_SUPER_LONG_PRESS: //shutdown and switch power down
               //power down is handled by UPS
-              sprintf(strMessage, "u!shutdown -P now\r\n"); //proforma -P. not supported by Raspi
+              sprintf(strMessage, UPS_REQ_PRW_OFF); //proforma -P. not supported by Raspi
               ecTxString(strMessage, strlen(strMessage));
               break;
           default:
@@ -469,32 +461,35 @@ ePiState_t ecSerialHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
             if (keyPress == KEY_SUPER_LONG_PRESS)
                 preparePiPower_off = 1;
 
-            /* process Pi responses */
+            /* process Pi requests */
             if(ecGetRxString(rxStrBuf, RX_BUFFER_SIZE))
             {
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_STATUS))
                 {
-                    sprintf(strMessage, "%s0x%04X  %s", UPS_PREFIX, g_powerState, C_HDR_STR);
+                    sprintf(strMessage, "%s0x%04X\r\n", UPS_RESPONSE, g_powerState);
                     ecTxString(strMessage, strlen(strMessage));
                 }
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_ANALOG))
                 {
-                    sprintf(strMessage, "%s%s", UPS_PREFIX,g_analogStr);
+                    sprintf(strMessage, "%s%s", UPS_RESPONSE,g_analogStr);
                     ecTxString(strMessage, strlen(strMessage));
                 }
                 if(ecDecodePiRequest(rxStrBuf, PI_REQ_PWR_OFF))
                 {
-                    sprintf(strMessage,"%s%s\n", UPS_PREFIX, PI_REQ_PWR_OFF);
+                    sprintf(strMessage,"%s%s\n", UPS_RESPONSE, PI_REQ_PWR_OFF);
                     ecTxString(strMessage, strlen(strMessage)); //this goes in the air, debug only
                     preparePiPower_off = 1;
                     piState = PI_SHUTTING_DOWN;
                 }
-
-
+                if(ecDecodePiRequest(rxStrBuf, PI_REQ_VERSION))
+                {
+                    sprintf(strMessage, "%s%s", UPS_RESPONSE, C_HDR_STR);
+                    ecTxString(strMessage, strlen(strMessage));
+                }
                 if(ecDecodePiAnswer(rxStrBuf, PI_ACK_SHUTDOWN))
                     piState = PI_SHUTTING_DOWN;
 
-                if(ecDecodePiAnswer(rxStrBuf, PI_ACK_READY))
+                if(ecDecodePiAnswer(rxStrBuf, PI_ACK_READY)) //watchdog retrigger
                     g_PI_watchdog_Ok = 1;
 
             }

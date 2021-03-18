@@ -3,6 +3,7 @@
   * @file           : UPS-2.h
   * @brief          : Header for project specific defines and global variables
   * @author         : Klaus Mezger
+  *
   *                   This file contains common defines of the application.
   ******************************************************************************
 */
@@ -13,16 +14,24 @@
 
 //#define SERIAL_DEBUG
 
-#define C_HDR_STR "ECOM UPS-2 build " __DATE__"\r\n"
+#define C_HDR_STR "UPS-2 build " __DATE__"\r\n"
 
 #define PI_ACK_SHUTDOWN     ">OK sudo shutdown"
 #define PI_ACK_READY        ">OK ready"
 
+//requests from Pi -> UPS
+#define PI_REQ_VERSION      "r?version" //UPS version
 #define PI_REQ_STATUS       "r?status"
 #define PI_REQ_ANALOG       "r?analog"
 #define PI_REQ_PWR_OFF      "r?shutdown -P"
 
-#define UPS_PREFIX          "u>"
+
+//UPS -> Pi
+#define UPS_RESPONSE             "u>"
+#define UPS_REQ_SHUTDOWN    "u!shutdown now\r\n"
+#define UPS_REQ_RESTART     "u!shutdown -r now\r\n"
+#define UPS_REQ_PRW_OFF     "u!shutdown -P now\r\n"
+
 
 
 //

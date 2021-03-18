@@ -100,7 +100,7 @@ void ecRx_Init(void);
 /* USER CODE BEGIN 0 */
 char *ecFormatFixptStr(int16_t Raw_value)
 {
-    static char retStr[8];
+    static char retStr[16];
     snprintf(retStr, sizeof(retStr)-1, "%d.%01d", Raw_value/10, (Raw_value % 10));
     return retStr;
 }
