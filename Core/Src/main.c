@@ -9,10 +9,10 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 ECOM ENGINEERING
+  * <h2><center>&copy; Copyright (c) 2020 Klaus Mezger, ECOM ENGINEERING
   * All rights reserved.</center></h2>
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
+  * Development base software component is licensed by ST under BSD 3-Clause license,
   * the "License"; You may not use this file except in compliance with the
   * License. You may obtain a copy of the License at:
   *                        opensource.org/licenses/BSD-3-Clause
@@ -22,6 +22,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "jump_bootloader.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -122,6 +123,7 @@ int main(void)
     char rxStrBuf[80];
 #endif
 
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -147,9 +149,37 @@ int main(void)
   MX_TIM3_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+
+
   HAL_TIM_Base_Start_IT(&htim3); //1ms Timer
   ecSWTimerInit();
   ecLEDinit();
+
+  if (HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin) == 0) //check if bootloader requested
+  {
+
+	  ecSetLED(LED_Pi, LED_ON);
+	  ecSetLED(LED_Main, LED_ON);
+	  ecSetLED(LED_Batt, LED_ON);
+	  ecSWTimerStart(DELAY_TIMER, KEY_T_LONG); //wait
+	  int key = 1;
+	  while(ecSWTimerRead(DELAY_TIMER) > 0)
+	  {
+		  key = HAL_GPIO_ReadPin(BUTTON_GPIO_Port, BUTTON_Pin); //check if button still active
+		  if (key == 1)
+			  break;
+	  }
+	  if(key == 0)
+	  {
+		JumpToBootloader();
+	  }
+	  ecSetLED(LED_Pi, LED_OFF);
+	  ecSetLED(LED_Main, LED_OFF);
+	  ecSetLED(LED_Batt, LED_OFF);
+
+  }
+
+
 
   /* Run ADC calibration */
   if (HAL_ADCEx_Calibration_Start(&hadc1) != HAL_OK)
@@ -168,7 +198,7 @@ int main(void)
   HAL_GPIO_WritePin(CMD_OUT_GPIO_Port, CMD_OUT_Pin, GPIO_PIN_SET); //prepare Pi startup
   HAL_GPIO_WritePin(EN_5V_GPIO_Port,  EN_5V_Pin, GPIO_PIN_SET); //turn 5V Pi ON
 
-  ecSWTimerStart(DELAY_TIMER, 1000); //wait s, allow system and power stabilisation
+  ecSWTimerStart(DELAY_TIMER, 1000); //wait s, allow system and power stabilization
   while(ecSWTimerRead(DELAY_TIMER));
 
 
@@ -225,22 +255,6 @@ int main(void)
           ecSerialExecCommand(keyPress);
           piState = ecSerialHandleFeedback(keyPress, piState);
 	  }
-
-
-
-
-/*
-	  if(ecSWTimerRead(BLINK_TIMER) == 0)
-	  {
-		  if(keyPress == KEY_PENDING)
-			  ecSWTimerStart(BLINK_TIMER, 50);
-		  else
-			  ecSWTimerStart(BLINK_TIMER, 500);
-		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-
-	  }
-*/
-
 
     /* USER CODE END WHILE */
 
@@ -351,7 +365,6 @@ static void MX_ADC1_Init(void)
   /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_4;
-  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -359,7 +372,6 @@ static void MX_ADC1_Init(void)
   /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_6;
-  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -367,7 +379,6 @@ static void MX_ADC1_Init(void)
   /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -616,7 +627,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc1)
 {
 
-    // values in mV with divider 220k - 27k
+    // values in mV with divider 510kk - 62kk
     g_adc_voltages.main_voltage = (((g_adc_buf.main_voltage / 2) * 15) / 100) + 3;    //[100mV] incl input diode threshold
     g_adc_voltages.batt_voltage = (((g_adc_buf.batt_voltage / 2) * 15) / 100) + 3;    //[100mV] incl input diode threshold
     //ignore diode threshold if no input present

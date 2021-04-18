@@ -7,7 +7,7 @@
 /*! @file        Timer.c
 //  @brief       Software Timer Functions & Frequency Generation
 //  @author      Klaus Mezger
-//  @version     18-07-05   Mez     inital
+//  @version     05-18-07   Mez     inital
 //
 //  Timebase is interrupt driven by CPU internal timer.
 //  Software timers are derived from HW timer interrupt and are only
@@ -157,14 +157,7 @@ void ecSWTimerClk(void)
 	}
 }
 
-/*
-#define LED_Pi_Pin GPIO_PIN_7
-#define LED_Pi_GPIO_Port GPIOB
-#define LED_Batt_Pin GPIO_PIN_9
-#define LED_Batt_GPIO_Port GPIOB
-#define LED_Main_Pin GPIO_PIN_10
-#define LED_Main_GPIO_Port GPIOC
-*/
+
 /**
   * @brief  		Public:
   * @param[in]		none
@@ -179,9 +172,9 @@ void ecLEDinit(void)
     gLED[LED_Batt].pin = LED_Batt_Pin;
     gLED[LED_Main].port =  LED_Main_GPIO_Port;
     gLED[LED_Main].pin = LED_Main_Pin;
-    gLED[LED_NUCLEO].port = LED_GPIO_Port;
-    gLED[LED_NUCLEO].pin = LED_Pin;
-    /* ... let compile set null all globals */
+//    gLED[LED_NUCLEO].port = LED_GPIO_Port;
+//    gLED[LED_NUCLEO].pin = LED_Pin;
+    /* ... let compiler set all globals to null*/
 }
 
 /**

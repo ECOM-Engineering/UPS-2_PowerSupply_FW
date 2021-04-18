@@ -43,6 +43,9 @@
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
+ /**
+   * SystemCoreClock variable according to Clock Register Values.
+ **/
 
 /* USER CODE END EM */
 
