@@ -19,8 +19,7 @@
 #include "UPS-2.h"
 #include "interface.h"
 #include "Timer.h"
-
-
+#include "jump_bootloader.h"
 
 //== local defines
 #define PORT_SHORT_PULSE 100
@@ -47,7 +46,7 @@ uint8_t g_PI_watchdog_Ok;
 */
 
 /* Tested with STM32G070 and g030.
- * This routine is fast because of using fixoint arithmetic.
+ * This routine is fast because of using fixpoint arithmetic.
  * Works without TS_CAL2, because this is not mentioned in the datasheets of STM32G030 and g070.
  * Even with using TS_CAL2 from STM32g031 / g071 you do possibly not get better results
  *
@@ -370,7 +369,7 @@ int ecSerialExecCommand(eKeyPress_t keyPress)
               break;
 
           case KEY_SHORT_PRESS:  //UPS internal command: switch power on
-              sprintf(strMessage, "> Pi power ON\r\n");
+        	  sprintf(strMessage, "> Pi power ON\r\n");
               ecTxString(strMessage, strlen(strMessage));
               break;
 
@@ -486,8 +485,22 @@ ePiState_t ecSerialHandleFeedback(eKeyPress_t keyPress, ePiState_t piState)
                     sprintf(strMessage, "%s%s", UPS_RESPONSE, C_HDR_STR);
                     ecTxString(strMessage, strlen(strMessage));
                 }
+
+                if(ecDecodePiRequest(rxStrBuf, PI_REQ_BOOTLOADER))
+                {
+                    ecSetLED(LED_Pi, 100);
+                    ecSetLED(LED_Batt, 100);
+                    ecSetLED(LED_Main, 100);
+//                    sprintf(strMessage,"%s%s\n", UPS_RESPONSE, PI_REQ_BOOTLOADER);
+//                    ecTxString(strMessage, strlen(strMessage));
+//                    ecSWTimerStart(DELAY_TIMER,500); //allow Pi reaction
+//                   while(ecSWTimerRead(DELAY_TIMER));
+                    JumpToBootloader();
+                }
+
                 if(ecDecodePiAnswer(rxStrBuf, PI_ACK_SHUTDOWN))
                     piState = PI_SHUTTING_DOWN;
+
 
                 if(ecDecodePiAnswer(rxStrBuf, PI_ACK_READY)) //watchdog retrigger
                     g_PI_watchdog_Ok = 1;

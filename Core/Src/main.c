@@ -22,7 +22,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "jump_bootloader.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -546,10 +545,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_Main_GPIO_Port, LED_Main_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, EN_5V_Pin|LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, EN_5V_Pin|CMD_OUT_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CMD_OUT_GPIO_Port, CMD_OUT_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : LED_Pi_Pin LED_Batt_Pin */
   GPIO_InitStruct.Pin = LED_Pi_Pin|LED_Batt_Pin;

@@ -9,10 +9,9 @@
 */
 #include "main.h"
 
+
 #ifndef INC_UPS_2_H_
 #define INC_UPS_2_H_
-
-//#define SERIAL_DEBUG
 
 #define C_HDR_STR "UPS-2 build " __DATE__"\r\n"
 
@@ -24,6 +23,7 @@
 #define PI_REQ_STATUS       "r?status"
 #define PI_REQ_ANALOG       "r?analog"
 #define PI_REQ_PWR_OFF      "r?shutdown -P"
+#define PI_REQ_BOOTLOADER	"r?boot"
 
 
 //UPS -> Pi
