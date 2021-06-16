@@ -29,6 +29,7 @@
 #include "timer.h"
 #include "interface.h"
 #include "lowlevel.h"
+#include "jump_bootloader.h"
 
 /* USER CODE END Includes */
 
