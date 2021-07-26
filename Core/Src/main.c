@@ -5,12 +5,12 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body
+  * @brief          : Main program
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2020 Klaus Mezger, ECOM ENGINEERING
-  * All rights reserved.</center></h2>
+  * <h2><center>&copy; Copyright (c) 2020-2021 Klaus Mezger, ECOM ENGINEERING
+  * Open Source licensed under BSD-2-Clause</center></h2>
   *
   * Development base software component is licensed by ST under BSD 3-Clause license,
   * the "License"; You may not use this file except in compliance with the
@@ -211,7 +211,8 @@ int main(void)
   while (1)
   {
 
-      if(g_adcRdy)
+//toDo if piState == power OFF --> LED's short flashes for power save, CPU sleep until interrupts
+	  if(g_adcRdy)
 	  {
 		  g_adcRdy = 0;
 		  g_powerState = ecAnalogHandler(g_adc_voltages);

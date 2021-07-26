@@ -231,4 +231,3 @@ ProjectManager.DeviceId=STM32G030F6Px
 ProjectManager.LibraryCopy=1
 PA7.Signal=GPIO_Input
 PA6.Locked=true
-isbadioc=false
