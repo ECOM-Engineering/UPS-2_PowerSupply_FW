@@ -4,5 +4,7 @@
 /Drivers/
 /Docs/html/
 /Docs/latex
-/Release/
+/Release/Core
+/Release/Drivers
 *.save
+/Release/
